@@ -1,17 +1,16 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Home from './pages/Home' // Make sure you created this file in Step 2
+import { Routes, Route } from 'react-router-dom' // Removed 'BrowserRouter as Router'
+import Home from './pages/Home' 
 import MovieDetails from './pages/MovieDetails'
 import './App.css'
 
 const App = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/movie/:id" element={<MovieDetails />} />
-      </Routes>
-    </Router>
+    // The <Router> tag is removed because it is now in main.jsx
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/movie/:id" element={<MovieDetails />} />
+    </Routes>
   )
 }
 
