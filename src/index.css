@@ -17,7 +17,7 @@
 
   --breakpoint-xs: 480px;
 
-  --background-image-hero-pattern: url("/hero-bg.png");
+  /* --background-image-hero-pattern: url("/hero-bg.png"); */
 }
 
 @layer base {
@@ -66,7 +66,7 @@
   /* ---------------------------------------- */
 
   .pattern {
-    @apply bg-hero-pattern w-full h-screen bg-center bg-cover absolute z-0;
+    @apply  w-full h-screen bg-center bg-cover absolute z-0;
   }
 
   .wrapper {
@@ -74,7 +74,7 @@
   }
 
   .trending {
-    @apply mt-20;
+    @apply mt-6;
 
     & ul {
       /* CHANGED: overflow-y-auto -> overflow-x-auto for horizontal scrolling */
@@ -95,7 +95,7 @@
   }
 
   .search {
-    @apply w-full bg-light-100/5 px-4 py-3 rounded-lg mt-10 max-w-3xl mx-auto border border-transparent transition-all duration-250;
+    @apply w-full bg-light-100/5 px-4 py-3 rounded-lg mt-10 max-w-3xl mx-auto border-2 border-transparent transition-all duration-250;
 
     /* Added hover state */
     &:hover {
