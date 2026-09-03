@@ -18,9 +18,21 @@ const API_OPTIONS = {
   }
 }
 
+// 1. Define your core genres for the filter pills
+const MOVIE_GENRES = [
+  { id: 28, name: 'Action' },
+  { id: 12, name: 'Adventure' },
+  { id: 16, name: 'Animation' },
+  { id: 35, name: 'Comedy' },
+  { id: 878, name: 'Sci-Fi' },
+  { id: 27, name: 'Horror' }
+];
+
 const Home = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  // 2. State for the active genre filter
+  const [activeGenre, setActiveGenre] = useState(null)
 
   const [movieList, setMovieList] = useState([])
   const [errorMessage, setErrorMessage] = useState('')
@@ -32,23 +44,30 @@ const Home = () => {
   const trendingListRef = useRef(null)
   const [isTrendingLoading, setIsTrendingLoading] = useState(false)
 
-  // Carousel State
   const [heroMovies, setHeroMovies] = useState([])
   const [activeHeroIndex, setActiveHeroIndex] = useState(0)
 
+  // 3. Derived state to know if we are actively searching or filtering
+  const isFiltering = debouncedSearchTerm.trim() !== '' || activeGenre !== null;
+
   useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm])
 
-  const fetchMovies = async (query = '', page = 1) => {
+  // 4. Update fetchMovies to handle genre IDs
+  const fetchMovies = async (query = '', page = 1, genre = null) => {
     setIsLoading(true);
     setErrorMessage('');
 
     try {
-      const endpoint = query
-        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&page=${page}`
-        : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc&page=${page}`;
+      let endpoint;
+      if (query) {
+        endpoint = `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&page=${page}`;
+      } else if (genre) {
+        endpoint = `${API_BASE_URL}/discover/movie?sort_by=popularity.desc&with_genres=${genre.id}&page=${page}`;
+      } else {
+        endpoint = `${API_BASE_URL}/discover/movie?sort_by=popularity.desc&page=${page}`;
+      }
 
       const response = await fetch(endpoint, API_OPTIONS);
-
       if (!response.ok) throw new Error('Failed to fetch movies');
 
       const data = await response.json();
@@ -88,7 +107,6 @@ const Home = () => {
       if (!response.ok) throw new Error('Failed to fetch hero movies');
 
       const data = await response.json();
-
       const validMovies = data.results.filter(movie => movie.backdrop_path !== null);
 
       setHeroMovies(validMovies.slice(0, 8));
@@ -96,7 +114,7 @@ const Home = () => {
       console.error(`Error fetching hero movies: ${error}`);
     }
   }
-  
+
   useEffect(() => {
     if (heroMovies.length === 0) return
     const interval = setInterval(() => {
@@ -105,13 +123,15 @@ const Home = () => {
     return () => clearInterval(interval)
   }, [heroMovies])
 
+  // 5. Fire fetchMovies whenever search, page, or genre changes
   useEffect(() => {
-    fetchMovies(debouncedSearchTerm, currentPage);
-  }, [debouncedSearchTerm, currentPage]);
+    fetchMovies(debouncedSearchTerm, currentPage, activeGenre);
+  }, [debouncedSearchTerm, currentPage, activeGenre]);
 
+  // Reset page to 1 on new search or filter
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, activeGenre]);
 
   const scrollTrending = (direction) => {
     if (trendingListRef.current) {
@@ -138,13 +158,28 @@ const Home = () => {
     fetchHeroMovies();
   }, [])
 
+  // 6. Mutually Exclusive Handlers
+  const handleSearchChange = (value) => {
+    setSearchTerm(value);
+    if (value.trim() !== '') {
+      setActiveGenre(null); // Clear genre if typing
+    }
+  };
+
+  const handleGenreClick = (genre) => {
+    if (activeGenre?.id === genre.id) {
+      setActiveGenre(null); // Toggle off if clicking the active one
+    } else {
+      setActiveGenre(genre);
+      setSearchTerm(''); // Clear search if clicking a genre
+    }
+  };
+
   return (
     <main>
       <div className='pattern' />
-
       <div className='w-full h-1 bg-purple-800'></div>
 
-      {/* 1. EDGE-TO-EDGE CINEMATIC HERO */}
       <div className="relative w-full h-[65vh] lg:h-[80vh] flex flex-col items-center justify-center overflow-hidden">
         {heroMovies.length > 0 ? (
           <>
@@ -170,11 +205,27 @@ const Home = () => {
           <div className="absolute inset-0 bg-[#0f0d23] animate-pulse z-0"></div>
         )}
 
-        {/* Foreground Content */}
         <div className="relative z-10 w-full px-5 flex flex-col items-center text-center mt-20">
           <h1>Find <span className="text-gradient">Movies</span> You'll Enjoy Without The Hassle</h1>
 
-          <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+          {/* Pass the wrapper function to Search */}
+          <Search searchTerm={searchTerm} setSearchTerm={handleSearchChange} />
+
+          {/* 7. Genre Filter Pills */}
+          <div className="flex flex-wrap justify-center gap-3 mt-6 max-w-3xl">
+            {MOVIE_GENRES.map((genre) => (
+              <button
+                key={genre.id}
+                onClick={() => handleGenreClick(genre)}
+                className={`cursor-pointer px-5 py-2 rounded-full text-sm font-bold transition-all duration-300 border ${activeGenre?.id === genre.id
+                    ? 'bg-[#ab8bff] text-white border-[#ab8bff] shadow-[0_0_15px_rgba(171,139,255,0.4)]'
+                    : 'bg-[#1a1725]/80 backdrop-blur-md text-gray-300 border-[#2a2735] hover:border-[#ab8bff]/50 hover:text-white'
+                  }`}
+              >
+                {genre.name}
+              </button>
+            ))}
+          </div>
 
           {heroMovies.length > 0 && (
             <div className="flex gap-3 mt-12">
@@ -194,62 +245,65 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 2. MAIN CONTENT */}
       <div className='wrapper'>
-        {trendingMovies.length > 0 && (
-          <section className='trending'>
-            <h2>Popular On MovieHub</h2>
+        {/* 8. Conditionally hide the trending section if filtering */}
+        {!isFiltering && trendingMovies.length > 0 && (
+          <>
+            <section className='trending'>
+              <h2>Popular On MovieHub</h2>
+              {isTrendingLoading ? (
+                <Spinner />
+              ) : errorMessage ? (
+                <p className='text-red-500'>{errorMessage}</p>
+              ) : (
+                <div className="relative group ">
+                  <button
+                    className="trending-arrow -left-4 sm:-left-8 lg:-left-12"
+                    onClick={() => scrollTrending('left')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                      <path d="M15 6L9 12L15 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
 
-            {isTrendingLoading ? (
-              <Spinner />
-            ) : errorMessage ? (
-              <p className='text-red-500'>{errorMessage}</p>
-            ) : (
-              <div className="relative group ">
-                
-                {/* SVG Left Arrow - Pushed Outward */}
-                <button 
-                  className="trending-arrow -left-4 sm:-left-8 lg:-left-12" 
-                  onClick={() => scrollTrending('left')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none">
-                    <path d="M15 6L9 12L15 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
+                  <ul ref={trendingListRef}>
+                    {trendingMovies.map((movie, index) => (
+                      <li key={movie.$id}>
+                        <Link
+                          to={`/movie/${movie.movie_id}`}
+                          className="flex flex-row items-center gap-4"
+                        >
+                          <p>{index + 1}</p>
+                          <img src={movie.poster_url} alt={movie.title} />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
 
-                <ul ref={trendingListRef}>
-                  {trendingMovies.map((movie, index) => (
-                    <li key={movie.$id}>
-                      <Link
-                        to={`/movie/${movie.movie_id}`}
-                        className="flex flex-row items-center gap-4"
-                      >
-                        <p>{index + 1}</p>
-                        <img src={movie.poster_url} alt={movie.title} />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* SVG Right Arrow - Pushed Outward */}
-                <button 
-                  className="trending-arrow -right-4 sm:-right-8 lg:-right-12" 
-                  onClick={() => scrollTrending('right')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </div>
-            )}
-          </section>
+                  <button
+                    className="trending-arrow -right-4 sm:-right-8 lg:-right-12"
+                    onClick={() => scrollTrending('right')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </section>
+            <div className="w-full h-px bg-gradient-to-r from-transparent via-[#ab8bff]/20 to-transparent mb-14"></div>
+          </>
         )}
 
-        {/* Elegant Section Divider */}
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-[#ab8bff]/20 to-transparent mb-14"></div>
-
         <section className='all-movies'>
-          <h2>Trending today</h2>
+          {/* 9. Dynamic Section Header */}
+          <h2 className="text-2xl font-bold">
+            {debouncedSearchTerm
+              ? `Search results for "${debouncedSearchTerm}"`
+              : activeGenre
+                ? `${activeGenre.name} Movies`
+                : 'Trending today'}
+          </h2>
 
           {isLoading ? (
             <div className="flex justify-center mt-20"><Spinner /></div>
@@ -263,7 +317,6 @@ const Home = () => {
             </ul>
           )}
 
-          {/* Pagination UI */}
           {!isLoading && !errorMessage && movieList.length > 0 && (
             <div className="flex justify-center items-center gap-4 mt-16 mb-24">
               <button
