@@ -3,8 +3,9 @@ import '../App.css'
 import Search from '../components/search'
 import Spinner from '../components/spinner'
 import MovieCard from '../components/MovieCard'
+import AuthModal from '../components/AuthModal'
 import { useDebounce } from 'react-use'
-import { updateSearchCount, getTrendingMovies } from '../appwrite'
+import { updateSearchCount, getTrendingMovies, getCurrentUser, logoutUser } from '../appwrite'
 import { Link } from 'react-router-dom'
 
 const API_BASE_URL = 'https://api.themoviedb.org/3'
@@ -18,7 +19,6 @@ const API_OPTIONS = {
   }
 }
 
-// 1. Define your core genres for the filter pills
 const MOVIE_GENRES = [
   { id: 28, name: 'Action' },
   { id: 12, name: 'Adventure' },
@@ -31,7 +31,6 @@ const MOVIE_GENRES = [
 const Home = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
-  // 2. State for the active genre filter
   const [activeGenre, setActiveGenre] = useState(null)
 
   const [movieList, setMovieList] = useState([])
@@ -47,12 +46,33 @@ const Home = () => {
   const [heroMovies, setHeroMovies] = useState([])
   const [activeHeroIndex, setActiveHeroIndex] = useState(0)
 
-  // 3. Derived state to know if we are actively searching or filtering
+  // Auth State
+  const [currentUser, setCurrentUser] = useState(null)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false) // NEW: Dropdown state
+
   const isFiltering = debouncedSearchTerm.trim() !== '' || activeGenre !== null;
 
   useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm])
 
-  // 4. Update fetchMovies to handle genre IDs
+  // Check session on mount
+  const checkSession = async () => {
+    setIsAuthLoading(true);
+    const user = await getCurrentUser();
+    setCurrentUser(user);
+    setIsAuthLoading(false);
+  };
+
+  useEffect(() => {
+    checkSession();
+  }, []);
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setCurrentUser(null);
+  };
+
   const fetchMovies = async (query = '', page = 1, genre = null) => {
     setIsLoading(true);
     setErrorMessage('');
@@ -109,7 +129,7 @@ const Home = () => {
       const data = await response.json();
       const validMovies = data.results.filter(movie => movie.backdrop_path !== null);
 
-      setHeroMovies(validMovies.slice(0, 8));
+      setHeroMovies(validMovies.slice(0, 10));
     } catch (error) {
       console.error(`Error fetching hero movies: ${error}`);
     }
@@ -123,12 +143,10 @@ const Home = () => {
     return () => clearInterval(interval)
   }, [heroMovies])
 
-  // 5. Fire fetchMovies whenever search, page, or genre changes
   useEffect(() => {
     fetchMovies(debouncedSearchTerm, currentPage, activeGenre);
   }, [debouncedSearchTerm, currentPage, activeGenre]);
 
-  // Reset page to 1 on new search or filter
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchTerm, activeGenre]);
@@ -158,20 +176,19 @@ const Home = () => {
     fetchHeroMovies();
   }, [])
 
-  // 6. Mutually Exclusive Handlers
   const handleSearchChange = (value) => {
     setSearchTerm(value);
     if (value.trim() !== '') {
-      setActiveGenre(null); // Clear genre if typing
+      setActiveGenre(null);
     }
   };
 
   const handleGenreClick = (genre) => {
     if (activeGenre?.id === genre.id) {
-      setActiveGenre(null); // Toggle off if clicking the active one
+      setActiveGenre(null);
     } else {
       setActiveGenre(genre);
-      setSearchTerm(''); // Clear search if clicking a genre
+      setSearchTerm('');
     }
   };
 
@@ -180,7 +197,76 @@ const Home = () => {
       <div className='pattern' />
       <div className='w-full h-1 bg-purple-800'></div>
 
+      {/* 1. EDGE-TO-EDGE CINEMATIC HERO */}
       <div className="relative w-full h-[65vh] lg:h-[80vh] flex flex-col items-center justify-center overflow-hidden">
+
+        {/* Auth Button Overlay */}
+        {/* Auth Button Overlay */}
+        <div className="absolute top-6 right-6 z-50 flex items-center gap-4">
+          {!isAuthLoading && (
+            currentUser ? (
+              <div className="relative">
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-3 bg-black/40 backdrop-blur-md pl-2 pr-4 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  <div className="bg-[#ab8bff] text-white rounded-full p-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <span className="text-gray-200 text-sm font-medium">
+                    {currentUser.name}
+                  </span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-3 w-56 bg-[#0f0d23] border border-white/10 rounded-xl  py-2 animate-fade-in">
+                    <div className="px-4 py-2 border-b border-white/10 mb-1">
+                      <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
+                    </div>
+
+                    {/* NEW: Watchlist Link */}
+                    <Link
+                      to="/watchlist"
+                      className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors font-bold cursor-pointer flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#ab8bff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                      My Watchlist
+                    </Link>
+
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors font-bold cursor-pointer flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Log Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="bg-[#ab8bff]/90 hover:bg-[#8689FF]  text-white px-5 py-2 rounded-full text-sm font-normal transition-all hover:scale-105 cursor-pointer duration-300"
+               >
+                Log In / Sign Up
+              </button>
+            )
+          )}
+        </div>
+
+        {/* Dynamic Image Layers */}
         {heroMovies.length > 0 ? (
           <>
             {heroMovies.map((movie, index) => {
@@ -205,20 +291,20 @@ const Home = () => {
           <div className="absolute inset-0 bg-[#0f0d23] animate-pulse z-0"></div>
         )}
 
+        {/* Foreground Content */}
         <div className="relative z-10 w-full px-5 flex flex-col items-center text-center mt-20">
           <h1>Find <span className="text-gradient">Movies</span> You'll Enjoy Without The Hassle</h1>
 
-          {/* Pass the wrapper function to Search */}
           <Search searchTerm={searchTerm} setSearchTerm={handleSearchChange} />
 
-          {/* 7. Genre Filter Pills */}
+          {/* Genre Filter Pills */}
           <div className="flex flex-wrap justify-center gap-3 mt-6 max-w-3xl">
             {MOVIE_GENRES.map((genre) => (
               <button
                 key={genre.id}
                 onClick={() => handleGenreClick(genre)}
                 className={`cursor-pointer px-5 py-2 rounded-full text-sm font-bold transition-all duration-300 border ${activeGenre?.id === genre.id
-                    ? 'bg-[#ab8bff] text-white border-[#ab8bff] shadow-[0_0_15px_rgba(171,139,255,0.4)]'
+                    ? 'bg-[#ab8bff] text-white border-[#ab8bff] '
                     : 'bg-[#1a1725]/80 backdrop-blur-md text-gray-300 border-[#2a2735] hover:border-[#ab8bff]/50 hover:text-white'
                   }`}
               >
@@ -233,8 +319,8 @@ const Home = () => {
                 <button
                   key={index}
                   onClick={() => setActiveHeroIndex(index)}
-                  className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${index === activeHeroIndex
-                    ? 'w-10 bg-[#ab8bff] shadow-[0_0_12px_rgba(171,139,255,0.8)]'
+                  className={`cursor-pointer h-1.5 rounded-full transition-all duration-500 ${index === activeHeroIndex
+                    ? 'w-10 bg-[#ab8bff] '
                     : 'w-3 bg-white/30 hover:bg-white/60'
                     }`}
                   title={`View slide ${index + 1}`}
@@ -245,8 +331,8 @@ const Home = () => {
         </div>
       </div>
 
+      {/* 2. MAIN CONTENT */}
       <div className='wrapper'>
-        {/* 8. Conditionally hide the trending section if filtering */}
         {!isFiltering && trendingMovies.length > 0 && (
           <>
             <section className='trending'>
@@ -256,9 +342,9 @@ const Home = () => {
               ) : errorMessage ? (
                 <p className='text-red-500'>{errorMessage}</p>
               ) : (
-                <div className="relative group ">
+                <div className="relative group mt-6">
                   <button
-                    className="trending-arrow -left-4 sm:-left-8 lg:-left-12"
+                    className="trending-arrow cursor-pointer -left-4 sm:-left-8 lg:-left-12"
                     onClick={() => scrollTrending('left')}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none">
@@ -281,7 +367,7 @@ const Home = () => {
                   </ul>
 
                   <button
-                    className="trending-arrow -right-4 sm:-right-8 lg:-right-12"
+                    className="trending-arrow cursor-pointer -right-4 sm:-right-8 lg:-right-12"
                     onClick={() => scrollTrending('right')}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none">
@@ -296,7 +382,6 @@ const Home = () => {
         )}
 
         <section className='all-movies'>
-          {/* 9. Dynamic Section Header */}
           <h2 className="text-2xl font-bold">
             {debouncedSearchTerm
               ? `Search results for "${debouncedSearchTerm}"`
@@ -320,7 +405,7 @@ const Home = () => {
           {!isLoading && !errorMessage && movieList.length > 0 && (
             <div className="flex justify-center items-center gap-4 mt-16 mb-24">
               <button
-                className="pagination-btn"
+                className="pagination-btn cursor-pointer"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(prev => prev - 1)}
               >
@@ -339,7 +424,7 @@ const Home = () => {
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`pagination-number ${currentPage === pageNum ? 'active' : ''}`}
+                      className={`pagination-number cursor-pointer ${currentPage === pageNum ? 'active' : ''}`}
                     >
                       {pageNum}
                     </button>
@@ -348,7 +433,7 @@ const Home = () => {
               </div>
 
               <button
-                className="pagination-btn"
+                className="pagination-btn cursor-pointer"
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(prev => prev + 1)}
               >
@@ -358,6 +443,12 @@ const Home = () => {
           )}
         </section>
       </div>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={checkSession}
+      />
     </main>
   )
 }
