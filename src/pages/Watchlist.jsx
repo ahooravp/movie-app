@@ -80,9 +80,13 @@ const Watchlist = () => {
           <p className="text-red-500 text-center mt-10">{error}</p>
         ) : movies.length > 0 ? (
           <section className="all-movies">
-            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+<ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
               {movies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
+                <MovieCard 
+                  key={movie.id} 
+                  movie={movie} 
+                  savedMovieIds={movies.map(m => m.id)} // Pass IDs so bookmarks show as filled
+                />
               ))}
             </ul>
           </section>

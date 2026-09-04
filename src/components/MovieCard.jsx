@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; 
 import TrailerModal from "./TrailerModal";
-import { toggleWatchlist, getWatchlist } from "../appwrite";
+import { toggleWatchlist } from "../appwrite";
 
 const API_BASE_URL = 'https://api.themoviedb.org/3'
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
@@ -13,27 +13,21 @@ const API_OPTIONS = {
   }
 }
 
-const MovieCard = ({ movie }) => {
+const MovieCard = ({ movie, savedMovieIds = [] }) => {
   const { id, title, vote_average, release_date, original_language, poster_path } = movie;
   
-  // Trailer State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [trailerKey, setTrailerKey] = useState(null);
   const [isFetchingTrailer, setIsFetchingTrailer] = useState(false);
   
-  // Watchlist & Auth State
   const [isSaved, setIsSaved] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
-  // Check if this movie is saved when the card mounts
+  // --- UPDATED: Sync UI instantly when the parent's array changes ---
   useEffect(() => {
-    const checkWatchlistStatus = async () => {
-      const list = await getWatchlist();
-      setIsSaved(list.some(item => item.movie_id === id));
-    };
-    checkWatchlistStatus();
-  }, [id]);
+    setIsSaved(savedMovieIds.includes(id));
+  }, [savedMovieIds, id]);
 
   const handlePlayTrailer = async (e) => {
     e.preventDefault(); 

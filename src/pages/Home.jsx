@@ -5,7 +5,7 @@ import Spinner from '../components/spinner'
 import MovieCard from '../components/MovieCard'
 import AuthModal from '../components/AuthModal'
 import { useDebounce } from 'react-use'
-import { updateSearchCount, getTrendingMovies, getCurrentUser, logoutUser } from '../appwrite'
+import { updateSearchCount, getTrendingMovies, getCurrentUser, logoutUser, getWatchlist } from '../appwrite'
 import { Link } from 'react-router-dom'
 
 const API_BASE_URL = 'https://api.themoviedb.org/3'
@@ -50,17 +50,28 @@ const Home = () => {
   const [currentUser, setCurrentUser] = useState(null)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false) // NEW: Dropdown state
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false) 
+  const [savedMovieIds, setSavedMovieIds] = useState([])
 
   const isFiltering = debouncedSearchTerm.trim() !== '' || activeGenre !== null;
 
   useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm])
 
   // Check session on mount
-  const checkSession = async () => {
+const checkSession = async () => {
     setIsAuthLoading(true);
     const user = await getCurrentUser();
     setCurrentUser(user);
+    
+    if (user) {
+      // If logged in, fetch the list and extract just the IDs
+      const list = await getWatchlist();
+      setSavedMovieIds(list.map(item => item.movie_id));
+    } else {
+      // If logged out, clear the list
+      setSavedMovieIds([]);
+    }
+    
     setIsAuthLoading(false);
   };
 
@@ -71,6 +82,7 @@ const Home = () => {
   const handleLogout = async () => {
     await logoutUser();
     setCurrentUser(null);
+    setSavedMovieIds([]); // NEW: Instantly clears the bookmarks on the UI
   };
 
   const fetchMovies = async (query = '', page = 1, genre = null) => {
@@ -201,7 +213,6 @@ const Home = () => {
       <div className="relative w-full h-[65vh] lg:h-[80vh] flex flex-col items-center justify-center overflow-hidden">
 
         {/* Auth Button Overlay */}
-        {/* Auth Button Overlay */}
         <div className="absolute top-6 right-6 z-50 flex items-center gap-4">
           {!isAuthLoading && (
             currentUser ? (
@@ -224,7 +235,7 @@ const Home = () => {
                 </button>
 
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-3 w-56 bg-[#0f0d23] border border-white/10 rounded-xl  py-2 animate-fade-in">
+                  <div className="absolute right-0 mt-3 w-fit bg-[#0f0d23] border border-white/10 rounded-xl  py-2 animate-fade-in">
                     <div className="px-4 py-2 border-b border-white/10 mb-1">
                       <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
                     </div>
@@ -390,14 +401,14 @@ const Home = () => {
                 : 'Trending today'}
           </h2>
 
-          {isLoading ? (
+{isLoading ? (
             <div className="flex justify-center mt-20"><Spinner /></div>
           ) : errorMessage ? (
             <p className='text-red-500 text-center mt-10'>{errorMessage}</p>
           ) : (
             <ul className="mt-8 gap-8">
               {movieList.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
+                <MovieCard key={movie.id} movie={movie} savedMovieIds={savedMovieIds} />
               ))}
             </ul>
           )}
