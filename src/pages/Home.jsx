@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import '../App.css'
 import Search from '../components/search'
-import Spinner from '../components/spinner'
 import MovieCard from '../components/MovieCard'
 import AuthModal from '../components/AuthModal'
 import { useDebounce } from 'react-use'
@@ -50,28 +49,25 @@ const Home = () => {
   const [currentUser, setCurrentUser] = useState(null)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false) 
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [savedMovieIds, setSavedMovieIds] = useState([])
 
   const isFiltering = debouncedSearchTerm.trim() !== '' || activeGenre !== null;
 
   useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm])
 
-  // Check session on mount
-const checkSession = async () => {
+  const checkSession = async () => {
     setIsAuthLoading(true);
     const user = await getCurrentUser();
     setCurrentUser(user);
-    
+
     if (user) {
-      // If logged in, fetch the list and extract just the IDs
       const list = await getWatchlist();
       setSavedMovieIds(list.map(item => item.movie_id));
     } else {
-      // If logged out, clear the list
       setSavedMovieIds([]);
     }
-    
+
     setIsAuthLoading(false);
   };
 
@@ -82,13 +78,12 @@ const checkSession = async () => {
   const handleLogout = async () => {
     await logoutUser();
     setCurrentUser(null);
-    setSavedMovieIds([]); // NEW: Instantly clears the bookmarks on the UI
+    setSavedMovieIds([]);
   };
 
   const fetchMovies = async (query = '', page = 1, genre = null) => {
     setIsLoading(true);
     setErrorMessage('');
-
     try {
       let endpoint;
       if (query) {
@@ -209,75 +204,73 @@ const checkSession = async () => {
       <div className='pattern' />
       <div className='w-full h-1 bg-purple-800'></div>
 
-      {/* 1. EDGE-TO-EDGE CINEMATIC HERO */}
       <div className="relative w-full h-[65vh] lg:h-[80vh] flex flex-col items-center justify-center overflow-hidden">
 
         {/* Auth Button Overlay */}
         <div className="absolute top-6 right-6 z-50 flex items-center gap-4">
-          {!isAuthLoading && (
-            currentUser ? (
-              <div className="relative">
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-3 bg-black/40 backdrop-blur-md pl-2 pr-4 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                  <div className="bg-[#ab8bff] text-white rounded-full p-1.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <span className="text-gray-200 text-sm font-medium">
-                    {currentUser.name}
-                  </span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-3 w-fit bg-[#0f0d23] border border-white/10 rounded-xl  py-2 animate-fade-in">
-                    <div className="px-4 py-2 border-b border-white/10 mb-1">
-                      <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
-                    </div>
-
-                    {/* NEW: Watchlist Link */}
-                    <Link
-                      to="/watchlist"
-                      className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors font-bold cursor-pointer flex items-center gap-2"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#ab8bff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                      </svg>
-                      My Watchlist
-                    </Link>
-
-                    <button
-                      onClick={() => {
-                        setIsDropdownOpen(false);
-                        handleLogout();
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors font-bold cursor-pointer flex items-center gap-2"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      Log Out
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
+          {isAuthLoading ? (
+            // NEW: Auth Button Skeleton
+            <div className="w-35 h-10 bg-white/10 animate-pulse rounded-full backdrop-blur-md border border-white/5"></div>
+          ) : currentUser ? (
+            <div className="relative">
               <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="bg-[#ab8bff]/90 hover:bg-[#8689FF]  text-white px-5 py-2 rounded-full text-sm font-normal transition-all hover:scale-105 cursor-pointer duration-300"
-               >
-                Log In / Sign Up
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-3 bg-black/40 backdrop-blur-md pl-2 pr-4 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <div className="bg-[#ab8bff] text-white rounded-full p-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <span className="text-gray-200 text-sm font-medium">
+                  {currentUser.name}
+                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
-            )
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-3 w-fit bg-[#0f0d23] border border-white/10 rounded-xl py-2 animate-fade-in">
+                  <div className="px-4 py-2 border-b border-white/10 mb-1">
+                    <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
+                  </div>
+
+                  <Link
+                    to="/watchlist"
+                    className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors font-bold cursor-pointer flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#ab8bff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    My Watchlist
+                  </Link>
+
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors font-bold cursor-pointer flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Log Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="bg-[#ab8bff]/90 hover:bg-[#8689FF] text-white px-5 py-2 rounded-full text-sm font-normal transition-all hover:scale-105 cursor-pointer duration-300"
+            >
+              Log In / Sign Up
+            </button>
           )}
         </div>
 
-        {/* Dynamic Image Layers */}
         {heroMovies.length > 0 ? (
           <>
             {heroMovies.map((movie, index) => {
@@ -302,21 +295,19 @@ const checkSession = async () => {
           <div className="absolute inset-0 bg-[#0f0d23] animate-pulse z-0"></div>
         )}
 
-        {/* Foreground Content */}
         <div className="relative z-10 w-full px-5 flex flex-col items-center text-center mt-20">
           <h1>Find <span className="text-gradient">Movies</span> You'll Enjoy Without The Hassle</h1>
 
           <Search searchTerm={searchTerm} setSearchTerm={handleSearchChange} />
 
-          {/* Genre Filter Pills */}
           <div className="flex flex-wrap justify-center gap-3 mt-6 max-w-3xl">
             {MOVIE_GENRES.map((genre) => (
               <button
                 key={genre.id}
                 onClick={() => handleGenreClick(genre)}
                 className={`cursor-pointer px-5 py-2 rounded-full text-sm font-bold transition-all duration-300 border ${activeGenre?.id === genre.id
-                    ? 'bg-[#ab8bff] text-white border-[#ab8bff] '
-                    : 'bg-[#1a1725]/80 backdrop-blur-md text-gray-300 border-[#2a2735] hover:border-[#ab8bff]/50 hover:text-white'
+                  ? 'bg-[#ab8bff] text-white border-[#ab8bff] '
+                  : 'bg-[#1a1725]/80 backdrop-blur-md text-gray-300 border-[#2a2735] hover:border-[#ab8bff]/50 hover:text-white'
                   }`}
               >
                 {genre.name}
@@ -342,14 +333,22 @@ const checkSession = async () => {
         </div>
       </div>
 
-      {/* 2. MAIN CONTENT */}
       <div className='wrapper'>
-        {!isFiltering && trendingMovies.length > 0 && (
+        {!isFiltering && (isTrendingLoading || trendingMovies.length > 0) && (
           <>
             <section className='trending'>
               <h2>Popular On MovieHub</h2>
+
+              {/* REPLACED: Trending Spinner is now a Skeleton Array */}
               {isTrendingLoading ? (
-                <Spinner />
+                <div className="relative group mt-6">
+                  <ul className="overflow-hidden pointer-events-none">
+                    {/* Render exactly 5 skeletons */}
+                    {[...Array(5)].map((_, i) => (
+                      <TrendingSkeleton key={i} index={i} />
+                    ))}
+                  </ul>
+                </div>
               ) : errorMessage ? (
                 <p className='text-red-500'>{errorMessage}</p>
               ) : (
@@ -401,8 +400,13 @@ const checkSession = async () => {
                 : 'Trending today'}
           </h2>
 
-{isLoading ? (
-            <div className="flex justify-center mt-20"><Spinner /></div>
+          {/* REPLACED: All Movies Spinner is now a Skeleton Grid */}
+          {isLoading ? (
+            <ul className="mt-8 gap-8">
+              {[...Array(12)].map((_, i) => (
+                <MovieCardSkeleton key={i} />
+              ))}
+            </ul>
           ) : errorMessage ? (
             <p className='text-red-500 text-center mt-10'>{errorMessage}</p>
           ) : (
@@ -463,5 +467,38 @@ const checkSession = async () => {
     </main>
   )
 }
+
+// --- NEW SKELETON COMPONENTS ---
+// Defined outside the main component to keep rendering clean
+
+const TrendingSkeleton = ({ index }) => (
+  // Removed the global animate-pulse so the number stays static
+  <li className="flex flex-row items-center gap-2">
+    {/* Renders the actual static number using your App.css styles */}
+    <p>{index + 1}</p>
+
+    {/* Only the poster pulses. Scaled up to match real TMDB posters. */}
+    <div className="w-[150px] sm:w-[140px] h-[180px] aspect-[2/3] bg-white/5 rounded-lg shrink-0 shadow-xl animate-pulse"></div>
+  </li>
+);
+
+const MovieCardSkeleton = () => (
+  <div className="movie-card relative animate-pulse">
+    {/* Poster Skeleton */}
+    <div className="w-full aspect-[2/3] bg-white/5 rounded-lg shadow-xl mb-4"></div>
+
+    {/* Title & Metadata Skeletons */}
+    <div className="mt-4">
+      <div className="h-6 bg-white/5 rounded w-3/4 mb-4"></div>
+      <div className="flex items-center gap-2">
+        <div className="h-4 bg-white/5 rounded w-8"></div>
+        <span className="text-gray-700">•</span>
+        <div className="h-4 bg-white/5 rounded w-8"></div>
+        <span className="text-gray-700">•</span>
+        <div className="h-4 bg-white/5 rounded w-12"></div>
+      </div>
+    </div>
+  </div>
+);
 
 export default Home

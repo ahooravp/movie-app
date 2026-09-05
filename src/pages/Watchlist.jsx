@@ -65,7 +65,7 @@ const Watchlist = () => {
       <div className='pattern' />
       
       <div className="wrapper relative z-10 max-w-7xl mx-auto px-5 py-12">
-        <header className="flex justify-between items-center mb-10">
+        <header className="flex mr-25 items-center mb-10">
           <Link to="/" className="text-gray-100 hover:text-[#ab8bff] transition-colors font-bold flex items-center gap-2">
             ← Back to Home
           </Link>
