@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom' // Removed 'BrowserRouter as Ro
 import Home from './pages/Home' 
 import MovieDetails from './pages/MovieDetails'
 import './App.css'
-import Watchlist from './pages/WatchList' // NEW IMPORT
+import Watchlist from './pages/Watchlist' // NEW IMPORT
 
 const App = () => {
   return (
